@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+part 'src/universal_link_handler.dart';
+
 /// Instance to use library functions.
 /// * showCallkitIncoming(dynamic)
 /// * startCall(dynamic)
