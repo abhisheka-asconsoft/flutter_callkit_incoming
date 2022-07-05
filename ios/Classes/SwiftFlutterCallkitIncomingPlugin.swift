@@ -232,6 +232,10 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
         self.saveEndCall(data.uuid, 3)
         sendEvent(SwiftFlutterCallkitIncomingPlugin.ACTION_CALL_TIMEOUT, data.toJSON())
     }
+
+    func handleUniversalLink(_ link: String) {
+        sendEvent("handleUniversalLink", ["link": link])
+    }
     
     func getHandleType(_ handleType: String?) -> CXHandle.HandleType {
         var typeDefault = CXHandle.HandleType.generic
