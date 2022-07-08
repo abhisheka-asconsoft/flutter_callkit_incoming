@@ -27,6 +27,7 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
     private var eventChannel: FlutterEventChannel? = nil
     private var callManager: CallManager? = nil
     
+    private var universalLinkCallbackHandler: UniversalLinkCallbackHandler?
     private var eventCallbackHandler: EventCallbackHandler?
     private var sharedProvider: CXProvider? = nil
     
@@ -52,6 +53,7 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
         sharedInstance!.channel = FlutterMethodChannel(name: "flutter_callkit_incoming", binaryMessenger: registrar.messenger())
         sharedInstance!.eventChannel = FlutterEventChannel(name: "flutter_callkit_incoming_events", binaryMessenger: registrar.messenger())
         sharedInstance!.callManager = CallManager()
+        sharedInstance!.universalLinkCallbackHandler = UniversalLinkCallbackHandler()
         sharedInstance!.eventCallbackHandler = EventCallbackHandler()
         sharedInstance!.eventChannel?.setStreamHandler(sharedInstance!.eventCallbackHandler as? FlutterStreamHandler & NSObjectProtocol)
         return sharedInstance!
@@ -346,12 +348,6 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
         return mode
     }
     
-    
-    
-    
-    
-    
-    
     public func providerDidReset(_ provider: CXProvider) {
         if(self.callManager == nil){ return }
         for call in self.callManager!.calls{
@@ -496,7 +492,9 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
         self.sendEvent(SwiftFlutterCallkitIncomingPlugin.ACTION_CALL_TOGGLE_AUDIO_SESSION, [ "isActivate": false ])
     }
     
-    
+    public func handleUniversalLink(link: String) {
+        universalLinkCallbackHandler?.send(link)
+    }
 }
 
 class EventCallbackHandler: FlutterStreamHandler {
@@ -506,6 +504,27 @@ class EventCallbackHandler: FlutterStreamHandler {
         let data: [String : Any] = [
             "event": event,
             "body": body
+        ]
+        eventSink?(data)
+    }
+    
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        return nil
+    }
+    
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        return nil
+    }
+}
+
+class UniversalLinkCallbackHandler: FlutterStreamHandler {
+    private var eventSink: FlutterEventSink?
+    
+    public func send(_ link: String) {
+        let data: [String : Any] = [
+            "link": link
         ]
         eventSink?(data)
     }
