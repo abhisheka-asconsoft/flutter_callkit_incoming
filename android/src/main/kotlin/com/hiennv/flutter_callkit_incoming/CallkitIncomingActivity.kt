@@ -166,7 +166,7 @@ class CallkitIncomingActivity : Activity() {
         if (data == null) finish()
 
         tvNameCaller.text = data?.getString(EXTRA_CALLKIT_NAME_CALLER, "")
-        tvNumber.text = data?.getString(EXTRA_CALLKIT_HANDLE, "")
+        tvNumber.text = "gintaa"
 
         val isShowLogo = data?.getBoolean(EXTRA_CALLKIT_IS_SHOW_LOGO, false)
         ivLogo.visibility = if (isShowLogo == true) View.VISIBLE else View.INVISIBLE
@@ -200,15 +200,6 @@ class CallkitIncomingActivity : Activity() {
         try {
             ivBackground.setBackgroundColor(Color.parseColor(backgroundColor))
         } catch (error: Exception) {
-        }
-        val backgroundUrl = data?.getString(EXTRA_CALLKIT_BACKGROUND_URL, "")
-        if (backgroundUrl != null && backgroundUrl.isNotEmpty()) {
-            val headers = data.getSerializable(EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
-            getPicassoInstance(this@CallkitIncomingActivity, headers)
-                .load(backgroundUrl)
-                .placeholder(R.drawable.transparent)
-                .error(R.drawable.transparent)
-                .into(ivBackground)
         }
     }
 

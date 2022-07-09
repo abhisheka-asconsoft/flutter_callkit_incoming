@@ -10,7 +10,8 @@
         android:id="@+id/ivBackground"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#0955fa"
+        android:background="#ffffff"
+        android:src="@drawable/call_background"
         android:scaleType="centerCrop"
         tools:ignore="ContentDescription" />
 
@@ -73,7 +74,7 @@
                     android:autoSizeTextType="uniform"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@android:color/black"
                     android:textSize="@dimen/size_text_name"
                     app:autoSizeMaxTextSize="@dimen/size_text_name"
                     app:autoSizeMinTextSize="12sp"
