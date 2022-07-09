@@ -25,46 +25,49 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
     
     private var channel: FlutterMethodChannel? = nil
     private var eventChannel: FlutterEventChannel? = nil
+    private var universalLinkEventChannel: FlutterEventChannel? = nil
     private var callManager: CallManager? = nil
-    
+
     private var universalLinkCallbackHandler: UniversalLinkCallbackHandler?
     private var eventCallbackHandler: EventCallbackHandler?
     private var sharedProvider: CXProvider? = nil
-    
+
     private var outgoingCall : Call?
     private var answerCall : Call?
-    
+
     private var data: Data?
     private var isFromPushKit: Bool = false
     private let devicePushTokenVoIP = "DevicePushTokenVoIP"
-    
+
     private func sendEvent(_ event: String, _ body: [String : Any?]?) {
         eventCallbackHandler?.send(event, body ?? [:] as [String : Any?])
     }
-    
+
     @objc public func sendEventCustom(_ event: String, body: Any?) {
         eventCallbackHandler?.send(event, body ?? [:] as [String : Any?])
     }
-    
+
     public static func sharePluginWithRegister(with registrar: FlutterPluginRegistrar) -> SwiftFlutterCallkitIncomingPlugin {
         if(sharedInstance == nil){
             sharedInstance = SwiftFlutterCallkitIncomingPlugin()
         }
         sharedInstance!.channel = FlutterMethodChannel(name: "flutter_callkit_incoming", binaryMessenger: registrar.messenger())
         sharedInstance!.eventChannel = FlutterEventChannel(name: "flutter_callkit_incoming_events", binaryMessenger: registrar.messenger())
+        sharedInstance!.universalLinkEventChannel = FlutterEventChannel(name: "universal_link_event", binaryMessenger: registrar.messenger())
         sharedInstance!.callManager = CallManager()
         sharedInstance!.universalLinkCallbackHandler = UniversalLinkCallbackHandler()
         sharedInstance!.eventCallbackHandler = EventCallbackHandler()
         sharedInstance!.eventChannel?.setStreamHandler(sharedInstance!.eventCallbackHandler as? FlutterStreamHandler & NSObjectProtocol)
+        sharedInstance!.universalLinkEventChannel?.setStreamHandler(sharedInstance!.universalLinkCallbackHandler as? FlutterStreamHandler & NSObjectProtocol)
         return sharedInstance!
     }
-    
-    
+
+
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = sharePluginWithRegister(with: registrar)
         registrar.addMethodCallDelegate(instance, channel: instance.channel!)
     }
-    
+
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "showCallkitIncoming":
@@ -121,25 +124,25 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
             result(FlutterMethodNotImplemented)
         }
     }
-    
+
     @objc public func setDevicePushTokenVoIP(_ deviceToken: String) {
         UserDefaults.standard.set(deviceToken, forKey: devicePushTokenVoIP)
         self.sendEvent(SwiftFlutterCallkitIncomingPlugin.ACTION_DID_UPDATE_DEVICE_PUSH_TOKEN_VOIP, ["deviceTokenVoIP":deviceToken])
     }
-    
+
     @objc public func getDevicePushTokenVoIP() -> String {
         return UserDefaults.standard.string(forKey: devicePushTokenVoIP) ?? ""
     }
-    
+
     @objc public func showCallkitIncoming(_ data: Data, fromPushKit: Bool) {
         self.isFromPushKit = fromPushKit
         if(fromPushKit){
             self.data = data
         }
-        
+
         var handle: CXHandle?
         handle = CXHandle(type: self.getHandleType(data.handleType), value: data.getEncryptHandle())
-        
+
         let callUpdate = CXCallUpdate()
         callUpdate.remoteHandle = handle
         callUpdate.supportsDTMF = data.supportsDTMF
@@ -148,11 +151,11 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
         callUpdate.supportsUngrouping = data.supportsUngrouping
         callUpdate.hasVideo = data.type > 0 ? true : false
         callUpdate.localizedCallerName = data.nameCaller
-        
+
         initCallkitProvider(data)
-        
+
         let uuid = UUID(uuidString: data.uuid)
-        
+
         configurAudioSession()
         self.sharedProvider?.reportNewIncomingCall(with: uuid!, update: callUpdate) { error in
             if(error == nil) {
@@ -165,7 +168,7 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
             }
         }
     }
-    
+
     @objc public func startCall(_ data: Data, fromPushKit: Bool) {
         self.isFromPushKit = fromPushKit
         if(fromPushKit){
@@ -174,7 +177,7 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
         initCallkitProvider(data)
         self.callManager?.startCall(data)
     }
-    
+
     @objc public func endCall(_ data: Data) {
         var call: Call? = nil
         if(self.isFromPushKit){
@@ -186,16 +189,16 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
         }
         self.callManager?.endCall(call: call!)
     }
-    
+
     @objc public func activeCalls() -> [[String: Any]]? {
         return self.callManager?.activeCalls()
     }
-    
+
     @objc public func endAllCalls() {
         self.isFromPushKit = false
         self.callManager?.endCallAlls()
     }
-    
+
     public func saveEndCall(_ uuid: String, _ reason: Int) {
         switch reason {
         case 1:
@@ -217,8 +220,8 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
             break
         }
     }
-    
-    
+
+
     func endCallNotExist(_ data: Data) {
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(data.duration)) {
             let call = self.callManager?.callWithUUID(uuid: UUID(uuidString: data.uuid)!)
@@ -227,16 +230,12 @@ public class SwiftFlutterCallkitIncomingPlugin: NSObject, FlutterPlugin, CXProvi
             }
         }
     }
-    
-    
-    
+
+
+
     func callEndTimeout(_ data: Data) {
         self.saveEndCall(data.uuid, 3)
         sendEvent(SwiftFlutterCallkitIncomingPlugin.ACTION_CALL_TIMEOUT, data.toJSON())
-    }
-
-    func handleUniversalLink(_ link: String) {
-        sendEvent("handleUniversalLink", ["link": link])
     }
     
     func getHandleType(_ handleType: String?) -> CXHandle.HandleType {

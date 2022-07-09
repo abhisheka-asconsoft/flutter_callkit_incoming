@@ -7,7 +7,10 @@ class UniversalLinkHandler {
       _eventChannel.receiveBroadcastStream().map(_receiveUniversalLinkEvent);
 
   static UniversalLinkEvent? _receiveUniversalLinkEvent(dynamic data) {
-    String link = data as String? ?? "";
+    String link = "";
+    if (data is Map) {
+      link = data['link'];
+    }
     return UniversalLinkEvent(link);
   }
 }
